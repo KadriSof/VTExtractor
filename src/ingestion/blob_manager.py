@@ -1,16 +1,20 @@
 # BlobServiceManager class
+from typing import List
+from datetime import datetime, timedelta, timezone
+
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError, ClientAuthenticationError
-from datetime import datetime, timedelta, timezone
-from typing import List
+
 from src.common.exceptions import BlobStorageException
+from src.common.logger import logger
 
 
-class BlobServiceManager:
+class TransferManager:
     def __init__(self, blob_service_client: BlobServiceClient, container_name: str):
         self.blob_service_client = blob_service_client
         self.container_name = container_name
         self._account_name = self.blob_service_client.account_name
+        logger.info("[TransferManager] Blob Service client initialized for container '%s'", self.container_name)
 
     def list_blobs(self, source_folder_path: str) -> List[str]:
         """List PDF blobs in source folder."""
@@ -20,6 +24,7 @@ class BlobServiceManager:
             return [blob.name for blob in blob_list if blob.name.endswith(".pdf")]
 
         except (ResourceNotFoundError, ClientAuthenticationError) as e:
+            logger.error("[TransferManager] Failed to list PDF blobs in source folder: '%s'", str(e))
             raise BlobStorageException(f"[BlobServiceManager] Failed to list PDF blobs in source folder: {str(e)}")
 
     def generate_user_delegation_sas(self, blob_name: str) -> str:
@@ -46,6 +51,7 @@ class BlobServiceManager:
             return sas_token
 
         except Exception as e:
+            logger.error("[TransferManager] Failed to generate user delegation SAS token: '%s'", str(e))
             raise BlobStorageException(f"[BlobServiceManager] Failed to generate SAS token: {str(e)}")
 
     @property
