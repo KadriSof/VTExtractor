@@ -7,7 +7,7 @@ from azure.storage.blob import BlobServiceClient
 from src.ingestion.blob_manager import BlobServiceManager
 from src.ingestion.transfer_manager import TransferManager
 from src.ingestion.models import BlobStorageConfig, TransferConfig
-# from src.common.logger import logger
+from src.common.logger import logger
 
 load_dotenv()
 
@@ -29,9 +29,15 @@ class IngestionService:
             container_name=target_config.container_name,
         )
         self.transfer_manager = TransferManager(source_manager=self.source_manager, target_manager=self.target_manager)
+        logger.info(f"[IngestionService] Ingestion service initialized")
 
     def ingest_files(self, transfer_config: TransferConfig) -> None:
         """Ingest files from source to target storage"""
-        # logger.info("Fetching PDFs from Azure Blob Storage...")
-        self.transfer_manager.transfer_files(config=transfer_config.model_dump())
-        # logger.info("File ingestion completed.)"
+        logger.info("Fetching PDFs from Azure Blob Storage...")
+        try:
+            self.transfer_manager.transfer_files(config=transfer_config.model_dump())
+            logger.info("[IngestionService] File ingestion completed successfully.")
+
+        except Exception as e:
+            logger.error("[IngestionService] File ingestion failed: %s", str(e))
+            raise e

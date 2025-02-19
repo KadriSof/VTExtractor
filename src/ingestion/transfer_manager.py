@@ -3,6 +3,7 @@ from azure.core.exceptions import ClientAuthenticationError
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 
 from src.common.exceptions import TransferError
+from src.common.logger import logger
 from src.ingestion.blob_manager import BlobServiceManager
 from src.ingestion.file_handler import FileHandler
 
@@ -11,6 +12,7 @@ class TransferManager:
     def __init__(self, source_manager: BlobServiceManager, target_manager: BlobServiceManager):
         self.source_manager = source_manager
         self.target_manager = target_manager
+        logger.info("[TransferManager] TransferManager initialized")
 
     @retry(
         stop=stop_after_attempt(3),
@@ -24,6 +26,7 @@ class TransferManager:
 
             blobs = self.source_manager.list_blobs(source_folder_path=config['source_folder_path'])
             filtered_files = FileHandler.filter_files_by_name(files=blobs, filter_string=config['filter_string'])
+            logger.info("[TransferManager] Files Found: %s", len(filtered_files))
 
             for blob_name in filtered_files:
                 try:
@@ -44,11 +47,19 @@ class TransferManager:
                         source_url=source_blob_url,
                         requires_sync=False
                     )
-                    print(
-                        f"Started copying blob '{blob_name}' from '{container_name}' to '{config['target_container_name']}'.")
+
+                    logger.info(
+                        "[TransferManager] Started copying blob '%s' from '%s' to '%s' - status: %s",
+                        blob_name,
+                        source_blob_url,
+                        target_blob_path,
+                        copy_operation.status
+                    )
 
                 except Exception as e:
-                    raise TransferError(f"Error transferring file '{str(blob_name)}': {str(e)}")
+                    logger.error("[TransferManager] Error Transferring files: %s", str(e))
+                    raise TransferError("[TransferManagerError] transferring file '%s': %s", blob_name, str(e))
 
         except Exception as e:
+            logger.error("[TransferManager] Files transfer operation failed: %s", str(e))
             raise TransferError(f"Files transfer operation failed.': {str(e)}")
