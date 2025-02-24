@@ -3,8 +3,10 @@ from pydantic import BaseModel, Field
 
 
 class BlobStorageConfig(BaseModel):
+    account_name: str = Field(..., description="Azure Blob Storage account name")
     account_url: str = Field(..., description="Azure Blob Storage account URL.")
     container_name: str = Field(..., description="Azure Blob Storage container name.")
+    key: str = Field(..., description="Azure Blob Storage account key.")
 
 
 class TransferConfig(BaseModel):
